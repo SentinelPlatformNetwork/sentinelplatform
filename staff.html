@@ -1,0 +1,795 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sentinel - Staff Management Panel</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-body: #0f172a;
+      --bg-card: #1e293b;
+      --border: #334155;
+      --text-primary: #f8fafc;
+      --text-secondary: #94a3b8;
+      --accent: #2563eb;
+      --accent-hover: #1d4ed8;
+      --danger: #dc2626;
+      --danger-bg: #450a0a;
+      --success: #16a34a;
+      --success-bg: #052e16;
+      --warning-bg: #fffbeb;
+      --warning-border: #fef3c7;
+      --warning-text: #b45309;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', sans-serif; }
+    body { background-color: var(--bg-body); color: var(--text-primary); min-height: 100vh; display: flex; flex-direction: column; }
+
+    header { background: var(--bg-card); border-bottom: 1px solid var(--border); padding: 1rem 2rem; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 100; }
+    .logo { font-size: 1.25rem; font-weight: 700; color: var(--text-primary); display: flex; flex-direction: column; align-items: flex-start; gap: 2px; }
+
+    .container { max-width: 1100px; margin: 2rem auto; width: 90%; flex: 1; }
+    
+    #staffLoginContainer { display: flex; flex-direction: column; justify-content: center; align-items: center; min-height: 70vh; }
+    .login-box { background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; padding: 2.5rem; width: 100%; max-width: 420px; box-shadow: 0 10px 25px rgba(0,0,0,0.3); text-align: center; margin-bottom: 1rem; }
+    .login-box h2 { font-size: 1.4rem; font-weight: 700; margin-bottom: 0.5rem; color: var(--text-primary); }
+    .login-box p { font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 1.5rem; }
+
+    .form-group { margin-bottom: 1.2rem; text-align: left; }
+    label { display: block; font-size: 0.85rem; font-weight: 600; color: var(--text-secondary); margin-bottom: 0.4rem; }
+    
+    .input-wrapper { position: relative; display: flex; align-items: center; }
+    input, textarea, select { width: 100%; padding: 10px 14px; border-radius: 8px; border: 1px solid var(--border); background: #0f172a; color: var(--text-primary); font-size: 0.95rem; }
+    input:focus, textarea:focus, select:focus { outline: none; border-color: var(--accent); }
+    
+    .toggle-password { position: absolute; right: 12px; background: transparent; border: none; color: var(--text-secondary); cursor: pointer; font-size: 0.85rem; font-weight: 600; }
+    .toggle-password:hover { color: var(--text-primary); }
+
+    .alert-security { background-color: rgba(254, 243, 199, 0.1); border: 1px solid var(--warning-border); color: #fde047; padding: 10px; border-radius: 8px; font-size: 0.78rem; font-weight: 700; line-height: 1.4; margin-bottom: 1.2rem; text-align: center; text-transform: uppercase; }
+
+    .btn { display: inline-flex; justify-content: center; align-items: center; width: 100%; padding: 10px 16px; border-radius: 8px; border: none; background: var(--accent); color: white; font-weight: 600; font-size: 0.95rem; cursor: pointer; transition: 0.2s; }
+    .btn:hover { background: var(--accent-hover); }
+    .btn-danger { background: var(--danger); }
+    .btn-danger:hover { background: #b91c1c; }
+    .btn-outline { background: transparent; border: 1px solid var(--border); color: var(--text-primary); }
+    .btn-outline:hover { background: #334155; }
+
+    .debug-box { width: 100%; max-width: 420px; background: #000000; border: 1px solid #334155; border-radius: 8px; padding: 1rem; font-family: monospace; font-size: 0.8rem; color: #4ade80; text-align: left; max-height: 150px; overflow-y: auto; }
+
+    #staffDashboard { display: none; }
+    .card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; padding: 1.8rem; margin-bottom: 1.5rem; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+    .card-title { font-size: 1.2rem; font-weight: 700; margin-bottom: 0.4rem; color: var(--text-primary); }
+    .card-subtitle { color: var(--text-secondary); font-size: 0.9rem; margin-bottom: 1.5rem; }
+
+    .subnav { display: flex; gap: 8px; margin-bottom: 1.5rem; border-bottom: 1px solid var(--border); padding-bottom: 1rem; flex-wrap: wrap; }
+    .subnav button { padding: 6px 14px; border-radius: 6px; font-size: 0.85rem; font-weight: 600; cursor: pointer; border: 1px solid var(--border); background: #0f172a; color: var(--text-secondary); }
+    .subnav button.active { background: var(--accent); color: #ffffff; border-color: var(--accent); }
+
+    table { width: 100%; border-collapse: collapse; margin-top: 1rem; }
+    th, td { padding: 12px; text-align: left; border-bottom: 1px solid var(--border); font-size: 0.9rem; }
+    th { color: var(--text-secondary); font-weight: 600; background: #0f172a; }
+
+    .grid-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1rem; margin-bottom: 1.5rem; }
+    .stat-box { background: #0f172a; border: 1px solid var(--border); border-radius: 8px; padding: 1.2rem; text-align: center; }
+    .stat-val { font-size: 1.8rem; font-weight: 700; color: var(--accent); margin-top: 4px; }
+
+    /* BANNER DI AVVISO FISSO ROSSO */
+    .banner-danger-warning {
+      background-color: var(--danger-bg);
+      border: 1px solid var(--danger);
+      color: #fca5a5;
+      padding: 12px 18px;
+      border-radius: 8px;
+      font-size: 0.88rem;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      text-align: center;
+      margin-bottom: 1.5rem;
+      box-shadow: 0 4px 12px rgba(220, 38, 38, 0.15);
+    }
+
+    .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15, 23, 42, 0.7); backdrop-filter: blur(2px); z-index: 1000; justify-content: center; align-items: center; }
+    .modal-box { background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; padding: 2rem; max-width: 480px; width: 90%; box-shadow: 0 10px 25px rgba(0,0,0,0.3); text-align: center; }
+
+    #toastContainer { position: fixed; top: 20px; right: 20px; z-index: 9999; display: flex; flex-direction: column; gap: 10px; pointer-events: none; }
+    .toast { pointer-events: auto; min-width: 280px; max-width: 360px; padding: 12px 18px; border-radius: 8px; font-size: 0.9rem; font-weight: 600; box-shadow: 0 4px 12px rgba(0,0,0,0.2); display: flex; align-items: center; justify-content: space-between; animation: slideIn 0.3s forwards; transition: opacity 0.3s; }
+    .toast-success { background-color: var(--success-bg); color: #4ade80; border: 1px solid rgba(74, 222, 128, 0.3); }
+    .toast-error { background-color: var(--danger-bg); color: #f87171; border: 1px solid rgba(248, 113, 113, 0.3); }
+    .toast-fadeout { opacity: 0; transform: translateY(-10px); }
+
+    @keyframes slideIn { from { transform: translateY(-20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+
+    footer { text-align: center; padding: 1.5rem; font-size: 0.8rem; color: var(--text-secondary); border-top: 1px solid var(--border); background: var(--bg-card); margin-top: auto; }
+  </style>
+</head>
+<body>
+
+  <div id="toastContainer"></div>
+
+  <header>
+    <div class="logo">
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <span style="font-size: 1.25rem; font-weight: 700; color: var(--text-primary);">Sentinel Platform</span>
+        <span style="font-size: 0.7rem; background: var(--accent); color: white; padding: 2px 6px; border-radius: 4px; font-weight: 600; letter-spacing: 0.5px;">CONTROL PANEL</span>
+      </div>
+      <span style="font-size: 0.75rem; color: var(--text-secondary); font-weight: 400;">La sicurezza su Roblox è nelle tue mani</span>
+    </div>
+    <div id="headerLogoutBtn" style="display: none; align-items: center; gap: 1rem;">
+      <span id="staffUserLabel" style="font-size: 0.85rem; color: var(--text-secondary);"></span>
+      <button class="btn btn-outline" style="width: auto; padding: 6px 14px;" onclick="staffLogout()">Esci</button>
+    </div>
+  </header>
+
+  <div class="container">
+
+    <!-- LOGIN STAFF -->
+    <div id="staffLoginContainer">
+      <div class="login-box">
+        <h2>Accesso Riservato Team</h2>
+        <p>Inserisci le credenziali assegnate per accedere al pannello di moderazione.</p>
+        
+        <div class="alert-security">
+          ⚠️ Attenzione: Non condividere queste credenziali con nessuno.
+        </div>
+
+        <div class="form-group">
+          <label>Username *</label>
+          <input type="text" id="staffUsername" placeholder="Il tuo username">
+        </div>
+        
+        <div class="form-group">
+          <label>Password *</label>
+          <div class="input-wrapper">
+            <input type="password" id="staffPassword" placeholder="••••••••" onkeydown="if(event.key==='Enter') verifyStaffLogin()">
+            <button type="button" class="toggle-password" onclick="togglePasswordVisibility()">Mostra</button>
+          </div>
+        </div>
+
+        <button class="btn" onclick="verifyStaffLogin()">Accedi al Pannello</button>
+      </div>
+
+      <div class="debug-box" id="debugConsole">
+        <span style="color: #94a3b8; font-weight: bold;">[DEBUG CONSOLE]</span><br>
+        Pronto per il login... Inserisci le credenziali.
+      </div>
+    </div>
+
+    <!-- DASHBOARD STAFF -->
+    <div id="staffDashboard">
+      
+      <div class="grid-stats">
+        <div class="stat-box">
+          <span style="font-size: 0.8rem; color: var(--text-secondary); font-weight: 600;">SEGNALAZIONI BLACKLIST</span>
+          <div class="stat-val" id="stStaffTotalReports">0</div>
+        </div>
+        <div class="stat-box">
+          <span style="font-size: 0.8rem; color: var(--text-secondary); font-weight: 600;">SHOP REGISTRATI</span>
+          <div class="stat-val" id="stStaffTotalVendors" style="color: #4ade80;">0</div>
+        </div>
+        <div class="stat-box">
+          <span style="font-size: 0.8rem; color: var(--text-secondary); font-weight: 600;">SHOP SEGNALATI</span>
+          <div class="stat-val" id="stStaffReportedShops" style="color: #f87171;">0</div>
+        </div>
+        <div class="stat-box">
+          <span style="font-size: 0.8rem; color: var(--text-secondary); font-weight: 600;">RECENSIONI SEGNALATE</span>
+          <div class="stat-val" id="stStaffReportedReviews" style="color: #f87171;">0</div>
+        </div>
+      </div>
+
+      <!-- AVVISO FISSO IN ROSSO -->
+      <div class="banner-danger-warning">
+        ⚠️ ATTENZIONE: OGNI ABUSO SARA' SANZIONATO
+      </div>
+
+      <div class="subnav">
+        <button class="active" onclick="switchStaffTab('tab-reports', this)">Moderazione Blacklist</button>
+        <button onclick="switchStaffTab('tab-shop-reports', this); loadReportedShops();">🚨 Shop Segnalati</button>
+        <button onclick="switchStaffTab('tab-vendors', this); loadStaffVendors();">🏪 Tutti gli Shop</button>
+        <button onclick="switchStaffTab('tab-all-reviews', this); loadAllReviews();">💬 Tutte le Recensioni</button>
+        <button onclick="switchStaffTab('tab-reviews', this); loadReportedReviews();">🚨 Recensioni Segnalate</button>
+      </div>
+
+      <!-- TAB 1: MODERAZIONE SEGNALAZIONI -->
+      <div id="tab-reports" class="staff-tab-content card">
+        <div class="card-title">Moderazione Segnalazioni (Blacklist)</div>
+        <div class="card-subtitle">Visualizza le segnalazioni, controlla le prove fotografiche in JPEG/PNG ed elimina i contenuti non idonei.</div>
+
+        <div style="overflow-x: auto;">
+          <table>
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Roblox ID</th>
+                <th>Nome Utente</th>
+                <th>Shop / Segnalato da</th>
+                <th>Motivo & Punti</th>
+                <th>Prova (JPEG)</th>
+                <th>Azioni</th>
+              </tr>
+            </thead>
+            <tbody id="staffReportsTableBody">
+              <tr><td colspan="7" style="text-align:center; color: var(--text-secondary);">Caricamento segnalazioni...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- TAB 2: SHOP SEGNALATI DAGLI UTENTI -->
+      <div id="tab-shop-reports" class="staff-tab-content card" style="display: none;">
+        <div class="card-title">Coda Moderazione Shop Segnalati</div>
+        <div class="card-subtitle">Analizza le segnalazioni inviate dalla community verso gli shop e decidi se approvare la rimozione o respingere la richiesta.</div>
+
+        <div style="overflow-x: auto;">
+          <table>
+            <thead>
+              <tr>
+                <th>Shop ID / Nome</th>
+                <th>Email Shop</th>
+                <th>Motivo della Segnalazione</th>
+                <th>Data</th>
+                <th>Azioni Moderazione</th>
+              </tr>
+            </thead>
+            <tbody id="reportedShopsTableBody">
+              <tr><td colspan="5" style="text-align:center; color: var(--text-secondary);">Caricamento shop segnalati...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- TAB 3: TUTTI GLI SHOP -->
+      <div id="tab-vendors" class="staff-tab-content card" style="display: none;">
+        <div class="card-title">Gestione Tutti gli Shop</div>
+        <div class="card-subtitle">Elenco completo dei negozi registrati. Puoi modificarli o rimuoverli direttamente anche senza segnalazione.</div>
+
+        <div style="overflow-x: auto;">
+          <table>
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Nome Shop</th>
+                <th>Contatto Discord</th>
+                <th>Email</th>
+                <th>Azioni Staff</th>
+              </tr>
+            </thead>
+            <tbody id="staffVendorsTableBody">
+              <tr><td colspan="5" style="text-align:center; color: var(--text-secondary);">Caricamento shop...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- TAB 4: TUTTE LE RECENSIONI -->
+      <div id="tab-all-reviews" class="staff-tab-content card" style="display: none;">
+        <div class="card-title">Tutte le Recensioni del Network</div>
+        <div class="card-subtitle">Elenco completo di tutte le recensioni lasciate dagli utenti per qualsiasi shop.</div>
+
+        <div style="overflow-x: auto;">
+          <table>
+            <thead>
+              <tr>
+                <th>Shop ID / Nome</th>
+                <th>Autore</th>
+                <th>Valutazione</th>
+                <th>Commento</th>
+                <th>Data</th>
+                <th>Azione</th>
+              </tr>
+            </thead>
+            <tbody id="allReviewsTableBody">
+              <tr><td colspan="6" style="text-align:center; color: var(--text-secondary);">Caricamento recensioni...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- TAB 5: RECENSIONI SEGNALATE -->
+      <div id="tab-reviews" class="staff-tab-content card" style="display: none;">
+        <div class="card-title">Coda Moderazione Recensioni Segnalate</div>
+        <div class="card-subtitle">Gestisci le recensioni segnalate per contenuti non idonei o false valutazioni.</div>
+
+        <div style="overflow-x: auto;">
+          <table>
+            <thead>
+              <tr>
+                <th>Shop ID / Nome</th>
+                <th>Autore</th>
+                <th>Testo Recensione</th>
+                <th>Motivo Segnalazione</th>
+                <th>Azioni Staff</th>
+              </tr>
+            </thead>
+            <tbody id="reportedReviewsBody">
+              <tr><td colspan="5" style="text-align:center; color: var(--text-secondary);">Caricamento recensioni segnalate...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </div>
+
+  </div>
+
+  <!-- MODALE MODIFICA SHOP PER LO STAFF -->
+  <div id="editShopModal" class="modal-overlay">
+    <div class="modal-box" style="text-align: left;">
+      <h3 style="font-size: 1.15rem; font-weight: 700; margin-bottom: 1rem; color: var(--text-primary);">Modifica Shop (Staff)</h3>
+      
+      <input type="hidden" id="editShopId">
+
+      <div class="form-group">
+        <label>Nome dello Shop *</label>
+        <input type="text" id="editShopName">
+      </div>
+      <div class="form-group">
+        <label>Contatto Discord *</label>
+        <input type="text" id="editShopDiscordContact">
+      </div>
+      <div class="form-group">
+        <label>Link Discord / Social *</label>
+        <input type="text" id="editShopDiscordLink">
+      </div>
+      <div class="form-group">
+        <label>Descrizione *</label>
+        <textarea id="editShopDesc" rows="3"></textarea>
+      </div>
+
+      <div style="display: flex; gap: 10px; margin-top: 1.5rem;">
+        <button class="btn btn-outline" style="width: 50%;" onclick="closeEditShopModal()">Annulla</button>
+        <button class="btn" style="width: 50%;" onclick="saveEditedShop()">Salva Modifiche</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODALE ROSSO DI CONFERMA ELIMINAZIONE SHOP CON MOTIVAZIONE -->
+  <div id="deleteShopModal" class="modal-overlay">
+    <div class="modal-box" style="border: 2px solid var(--danger);">
+      <div style="font-size: 2.2rem; margin-bottom: 0.4rem;">🚨</div>
+      <h3 style="font-size: 1.15rem; font-weight: 700; margin-bottom: 0.5rem; color: #f87171;">Sei sicuro di voler eliminare questo shop?</h3>
+      <p style="font-size: 0.88rem; color: var(--text-secondary); margin-bottom: 1rem; text-align: left;">
+        Stai rimuovendo lo shop <b id="delTargetShopName"></b>. L'azione non può essere annullata. Inserisci la motivazione ufficiale dello Staff:
+      </p>
+
+      <input type="hidden" id="delTargetVendorId">
+      <input type="hidden" id="delTargetShopEmail">
+
+      <div style="text-align: left; margin-bottom: 1rem;">
+        <label>Motivazione Ufficiale dello Staff *</label>
+        <textarea id="delReasonInput" rows="3" placeholder="Es. Segnalazione approvata per violazione del regolamento o truffa accertata..."></textarea>
+      </div>
+
+      <div style="display: flex; gap: 10px;">
+        <button class="btn btn-outline" style="width: 50%;" onclick="closeDeleteShopModal()">Annulla</button>
+        <button class="btn btn-danger" style="width: 50%;" onclick="confirmDeleteShop()">Conferma Rimozione</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODALE GENERICO DI CONFERMA A SCHERMO -->
+  <div id="customConfirmModal" class="modal-overlay">
+    <div class="modal-box" style="border: 2px solid var(--danger);">
+      <div style="font-size: 2.5rem; margin-bottom: 0.4rem;">⚠️</div>
+      <h3 id="confirmTitle" style="font-size: 1.2rem; font-weight: 700; margin-bottom: 0.6rem; color: #f87171;">Attenzione</h3>
+      <p id="confirmMessage" style="font-size: 0.9rem; color: var(--text-primary); margin-bottom: 1.5rem; line-height: 1.5; font-weight: 500;"></p>
+
+      <div style="display: flex; gap: 10px;">
+        <button class="btn btn-outline" style="width: 50%;" onclick="closeConfirmModal()">Annulla</button>
+        <button id="confirmBtnYes" class="btn btn-danger" style="width: 50%;">Conferma</button>
+      </div>
+    </div>
+  </div>
+
+  <footer>
+    <p>&copy; 2026 Sentinel Platform. Area di Gestione Interna.</p>
+  </footer>
+
+<script>
+  const SUPABASE_URL = "https://ggdinppsioevnrrdhctz.supabase.co";
+  const SUPABASE_KEY = "sb_publishable_zXx1zMx8R0rYWZp6fwilOQ_ByWJ4T8S"; 
+  const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+  function showToast(message, type = 'success') {
+    const container = document.getElementById("toastContainer");
+    const toast = document.createElement("div");
+    toast.className = `toast toast-${type}`;
+    toast.innerHTML = `<span>${message}</span>`;
+    container.appendChild(toast);
+    setTimeout(() => {
+      toast.classList.add("toast-fadeout");
+      setTimeout(() => toast.remove(), 300);
+    }, 3000);
+  }
+
+  function showConfirmModal(title, message, onConfirmCallback) {
+    document.getElementById("confirmTitle").innerText = title;
+    document.getElementById("confirmMessage").innerText = message;
+    const yesBtn = document.getElementById("confirmBtnYes");
+    
+    const newBtn = yesBtn.cloneNode(true);
+    yesBtn.parentNode.replaceChild(newBtn, yesBtn);
+
+    newBtn.addEventListener("click", () => {
+      closeConfirmModal();
+      onConfirmCallback();
+    });
+
+    document.getElementById("customConfirmModal").style.display = "flex";
+  }
+
+  function closeConfirmModal() {
+    document.getElementById("customConfirmModal").style.display = "none";
+  }
+
+  function togglePasswordVisibility() {
+    const passwordInput = document.getElementById("staffPassword");
+    const toggleBtn = document.querySelector(".toggle-password");
+    if (passwordInput.type === "password") {
+      passwordInput.type = "text";
+      toggleBtn.innerText = "Nascondi";
+    } else {
+      passwordInput.type = "password";
+      toggleBtn.innerText = "Mostra";
+    }
+  }
+
+  function switchStaffTab(tabId, btn) {
+    document.querySelectorAll('.staff-tab-content').forEach(t => t.style.display = 'none');
+    document.querySelectorAll('.subnav button').forEach(b => b.classList.remove('active'));
+    document.getElementById(tabId).style.display = 'block';
+    if(btn) btn.classList.add('active');
+  }
+
+  const activeStaff = JSON.parse(sessionStorage.getItem("sentinel_staff_user") || "null");
+  if (activeStaff) {
+    unlockStaffDashboard(activeStaff.username);
+  }
+
+  async function verifyStaffLogin() {
+    const username = document.getElementById("staffUsername").value.trim();
+    const password = document.getElementById("staffPassword").value.trim();
+
+    if (!username || !password) return showToast("Inserisci username e password.", "error");
+
+    try {
+      const { data, error } = await _supabase.from('staff_members').select('*').eq('username', username).maybeSingle();
+      if (error || !data || data.password !== password) return showToast("Credenziali non valide.", "error");
+      sessionStorage.setItem("sentinel_staff_user", JSON.stringify({ username: data.username }));
+      unlockStaffDashboard(data.username);
+      showToast(`Benvenuto, ${data.username}!`, "success");
+    } catch (err) {
+      showToast("Errore di connessione.", "error");
+    }
+  }
+
+  function unlockStaffDashboard(username) {
+    document.getElementById("staffLoginContainer").style.display = "none";
+    document.getElementById("staffDashboard").style.display = "block";
+    document.getElementById("headerLogoutBtn").style.display = "flex";
+    document.getElementById("staffUserLabel").innerText = `Staff: ${username}`;
+    loadStaffData();
+  }
+
+  function staffLogout() {
+    sessionStorage.removeItem("sentinel_staff_user");
+    window.location.reload();
+  }
+
+  async function loadStaffData() {
+    loadStaffReports();
+    loadReportedShops();
+    loadStaffVendors();
+    loadAllReviews();
+    loadReportedReviews();
+  }
+
+  async function loadStaffReports() {
+    const tbody = document.getElementById("staffReportsTableBody");
+    const { data: reports, error } = await _supabase.from('reports').select('*').order('created_at', { ascending: false });
+
+    if (error || !reports || reports.length === 0) {
+      tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; color: var(--text-secondary);">Nessuna segnalazione trovata.</td></tr>`;
+      document.getElementById("stStaffTotalReports").innerText = "0";
+      return;
+    }
+
+    document.getElementById("stStaffTotalReports").innerText = reports.length;
+    tbody.innerHTML = "";
+
+    reports.forEach(r => {
+      let proofHtml = '<span style="color:var(--text-secondary); font-size:0.8rem;">Nessuna</span>';
+      if (r.proof_url && r.proof_url.startsWith("http")) {
+        proofHtml = `<a href="${r.proof_url}" target="_blank" class="btn btn-outline" style="padding:4px 8px; font-size:0.78rem; width:auto; display:inline-block; text-decoration:none;">🔍 Apri Foto</a>`;
+      }
+
+      tbody.innerHTML += `
+        <tr>
+          <td>#${r.id}</td>
+          <td><strong>${r.roblox_id}</strong></td>
+          <td>@${r.roblox_username}</td>
+          <td style="font-size:0.85rem; color:var(--text-secondary);">${r.reporter_discord_id || 'Shop partner'}</td>
+          <td>
+            <div>${r.reason}</div>
+            <strong style="color:var(--danger); font-size:0.8rem;">${r.risk_points} PTS</strong>
+          </td>
+          <td>${proofHtml}</td>
+          <td>
+            <button class="btn btn-danger" style="padding:4px 8px; font-size:0.85rem; width:auto;" onclick="deleteReport(${r.id})">Elimina</button>
+          </td>
+        </tr>
+      `;
+    });
+  }
+
+  window.deleteReport = function(reportId) {
+    showConfirmModal("Elimina Segnalazione", `Sei sicuro di voler eliminare la segnalazione #${reportId}? L'azione non può essere annullata.`, async () => {
+      const { error } = await _supabase.from('reports').delete().eq('id', reportId);
+      if (error) showToast("Errore: " + error.message, "error");
+      else {
+        showToast("Segnalazione eliminata.", "success");
+        loadStaffReports();
+      }
+    });
+  }
+
+  // SHOP SEGNALATI DAGLI UTENTI
+  async function loadReportedShops() {
+    const tbody = document.getElementById("reportedShopsTableBody");
+    tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; color: var(--text-secondary);">Caricamento shop segnalati...</td></tr>`;
+
+    const { data: reports, error } = await _supabase.from('shop_reports').select('*, vendors(shop_name, email)').order('created_at', { ascending: false });
+
+    if (error || !reports || reports.length === 0) {
+      tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; color: var(--text-secondary);">Nessuna segnalazione di shop ricevuta.</td></tr>`;
+      document.getElementById("stStaffReportedShops").innerText = "0";
+      return;
+    }
+
+    document.getElementById("stStaffReportedShops").innerText = reports.length;
+    tbody.innerHTML = "";
+
+    reports.forEach(sr => {
+      const shopName = sr.vendors ? sr.vendors.shop_name : `Shop ID #${sr.vendor_id}`;
+      const email = sr.vendors ? sr.vendors.email : 'N/D';
+      const date = new Date(sr.created_at).toLocaleDateString("it-IT");
+
+      tbody.innerHTML += `
+        <tr>
+          <td><b>${shopName}</b></td>
+          <td>${email}</td>
+          <td style="max-width: 280px; word-break: break-word;">"${sr.reason}"</td>
+          <td style="font-size:0.85rem; color:var(--text-secondary);">${date}</td>
+          <td>
+            <div style="display:flex; gap:6px;">
+              <button class="btn btn-outline" style="padding:4px 8px; font-size:0.75rem; width:auto;" onclick="rejectShopReport(${sr.id})">❌ Respingi</button>
+              <button class="btn btn-danger" style="padding:4px 8px; font-size:0.75rem; width:auto;" onclick="openDeleteShopModal(${sr.vendor_id}, '${shopName.replace(/'/g, "\\'")}', '${email.replace(/'/g, "\\'")}', ${sr.id})">✅ Approva & Rimuovi</button>
+            </div>
+          </td>
+        </tr>
+      `;
+    });
+  }
+
+  window.rejectShopReport = async function(reportId) {
+    const { error } = await _supabase.from('shop_reports').delete().eq('id', reportId);
+    if (error) showToast("Errore: " + error.message, "error");
+    else {
+      showToast("Segnalazione shop respinta con successo.", "success");
+      loadReportedShops();
+    }
+  }
+
+  // GESTIONE TUTTI GLI SHOP
+  async function loadStaffVendors() {
+    const tbody = document.getElementById("staffVendorsTableBody");
+    const { data: vendors, error } = await _supabase.from('vendors').select('*').order('created_at', { ascending: false });
+
+    if (error || !vendors || vendors.length === 0) {
+      tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; color: var(--text-secondary);">Nessuno shop registrato.</td></tr>`;
+      document.getElementById("stStaffTotalVendors").innerText = "0";
+      return;
+    }
+
+    document.getElementById("stStaffTotalVendors").innerText = vendors.length;
+    tbody.innerHTML = "";
+
+    vendors.forEach(v => {
+      tbody.innerHTML += `
+        <tr>
+          <td><strong>#${v.id}</strong></td>
+          <td><b>${v.shop_name}</b></td>
+          <td>${v.discord_contact || 'Non spec.'}</td>
+          <td>${v.email}</td>
+          <td>
+            <div style="display:flex; gap:6px;">
+              <button class="btn btn-outline" style="padding:4px 8px; font-size:0.75rem; width:auto;" onclick="openEditShopModal(${v.id}, '${v.shop_name.replace(/'/g, "\\'")}', '${(v.discord_contact || '').replace(/'/g, "\\'")}', '${(v.discord_link || '').replace(/'/g, "\\'")}', '${(v.description || '').replace(/'/g, "\\'")}')">✏️ Modifica</button>
+              <button class="btn btn-danger" style="padding:4px 8px; font-size:0.75rem; width:auto;" onclick="openDeleteShopModal(${v.id}, '${v.shop_name.replace(/'/g, "\\'")}', '${v.email.replace(/'/g, "\\'")}')">🗑️ Elimina</button>
+            </div>
+          </td>
+        </tr>
+      `;
+    });
+  }
+
+  function openEditShopModal(id, name, discord, link, desc) {
+    document.getElementById("editShopId").value = id;
+    document.getElementById("editShopName").value = name;
+    document.getElementById("editShopDiscordContact").value = discord;
+    document.getElementById("editShopDiscordLink").value = link;
+    document.getElementById("editShopDesc").value = desc;
+    document.getElementById("editShopModal").style.display = "flex";
+  }
+
+  function closeEditShopModal() {
+    document.getElementById("editShopModal").style.display = "none";
+  }
+
+  async function saveEditedShop() {
+    const id = document.getElementById("editShopId").value;
+    const shop_name = document.getElementById("editShopName").value.trim();
+    const discord_contact = document.getElementById("editShopDiscordContact").value.trim();
+    const discord_link = document.getElementById("editShopDiscordLink").value.trim();
+    const description = document.getElementById("editShopDesc").value.trim();
+
+    if (!shop_name) return showToast("Il nome dello shop è obbligatorio!", "error");
+
+    const { error } = await _supabase.from('vendors').update({ shop_name, discord_contact, discord_link, description }).eq('id', id);
+
+    if (error) {
+      showToast("Errore durante l'aggiornamento: " + error.message, "error");
+    } else {
+      showToast("Shop modificato con successo!", "success");
+      closeEditShopModal();
+      loadStaffVendors();
+    }
+  }
+
+  // TUTTE LE RECENSIONI
+  async function loadAllReviews() {
+    const tbody = document.getElementById("allReviewsTableBody");
+    const { data: reviews, error } = await _supabase.from('reviews').select('*').order('created_at', { ascending: false });
+
+    if (error || !reviews || reviews.length === 0) {
+      tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; color: var(--text-secondary);">Nessuna recensione presente.</td></tr>`;
+      return;
+    }
+
+    const { data: vendors } = await _supabase.from('vendors').select('id, shop_name');
+    const vendorsMap = {};
+    if (vendors) { vendors.forEach(v => { vendorsMap[v.id] = v.shop_name; }); }
+
+    tbody.innerHTML = "";
+    reviews.forEach(r => {
+      const shopName = vendorsMap[r.vendor_id] ? vendorsMap[r.vendor_id] : `Shop ID: ${r.vendor_id}`;
+      const date = new Date(r.created_at).toLocaleDateString("it-IT");
+      tbody.innerHTML += `
+        <tr>
+          <td><b>${shopName}</b></td>
+          <td>${r.username}</td>
+          <td>${'⭐'.repeat(r.stars)}</td>
+          <td style="max-width: 250px; word-break: break-word;">"${r.comment}"</td>
+          <td style="font-size:0.85rem; color:var(--text-secondary);">${date}</td>
+          <td>
+            <button class="btn btn-danger" style="padding:4px 8px; font-size:0.75rem; width:auto;" onclick="deleteGeneralReview(${r.id})">Elimina</button>
+          </td>
+        </tr>
+      `;
+    });
+  }
+
+  window.deleteGeneralReview = function(reviewId) {
+    showConfirmModal("Elimina Recensione", "Sei sicuro di voler eliminare questa recensione? L'azione non può essere annullata.", async () => {
+      const { error } = await _supabase.from('reviews').delete().eq('id', reviewId);
+      if (error) showToast("Errore: " + error.message, "error");
+      else {
+        showToast("Recensione eliminata.", "success");
+        loadAllReviews();
+        loadReportedReviews();
+      }
+    });
+  }
+
+  async function loadReportedReviews() {
+    const tbody = document.getElementById("reportedReviewsBody");
+    const { data: reviews, error } = await _supabase.from('reviews').select('*').eq('reported', true).order('created_at', { ascending: false });
+
+    if (error || !reviews || reviews.length === 0) {
+      tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; color: var(--text-secondary);">Nessuna recensione segnalata al momento.</td></tr>`;
+      document.getElementById("stStaffReportedReviews").innerText = "0";
+      return;
+    }
+
+    document.getElementById("stStaffReportedReviews").innerText = reviews.length;
+    tbody.innerHTML = "";
+
+    const { data: vendors } = await _supabase.from('vendors').select('id, shop_name');
+    const vendorsMap = {};
+    if (vendors) { vendors.forEach(v => { vendorsMap[v.id] = v.shop_name; }); }
+
+    reviews.forEach(r => {
+      const shopName = vendorsMap[r.vendor_id] ? vendorsMap[r.vendor_id] : `Shop ID: ${r.vendor_id}`;
+      tbody.innerHTML += `
+        <tr>
+          <td><b>${shopName}</b></td>
+          <td>${r.username} (${'⭐'.repeat(r.stars)})</td>
+          <td style="max-width: 250px; word-break: break-word;">"${r.comment}"</td>
+          <td><span style="background:rgba(220, 38, 38, 0.2); color:#f87171; padding:4px 8px; border-radius:6px; font-weight:600; font-size:0.8rem;">${r.report_reason || 'Non specificato'}</span></td>
+          <td>
+            <div style="display:flex; gap:6px;">
+              <button class="btn btn-outline" style="padding:4px 8px; font-size:0.75rem; width:auto;" onclick="dismissReport(${r.id})">✅ Ignora</button>
+              <button class="btn btn-danger" style="padding:4px 8px; font-size:0.75rem; width:auto;" onclick="removeReportedReview(${r.id})">🗑️ Rimuovi</button>
+            </div>
+          </td>
+        </tr>
+      `;
+    });
+  }
+
+  window.dismissReport = async function(reviewId) {
+    const { error } = await _supabase.from('reviews').update({ reported: false, report_reason: null }).eq('id', reviewId);
+    if (error) showToast("Errore: " + error.message, "error");
+    else {
+      showToast("Segnalazione ignorata.", "success");
+      loadReportedReviews();
+    }
+  }
+
+  window.removeReportedReview = function(reviewId) {
+    showConfirmModal("Elimina Recensione", "Sei sicuro di voler eliminare questa recensione? L'azione non può essere annullata.", async () => {
+      const { error } = await _supabase.from('reviews').delete().eq('id', reviewId);
+      if (error) showToast("Errore: " + error.message, "error");
+      else {
+        showToast("Recensione eliminata.", "success");
+        loadReportedReviews();
+        loadAllReviews();
+      }
+    });
+  }
+
+  let activeReportIdToDelete = null;
+
+  window.openDeleteShopModal = function(vendorId, shopName, shopEmail, shopReportId = null) {
+    document.getElementById("delTargetVendorId").value = vendorId;
+    document.getElementById("delTargetShopName").innerText = shopName;
+    document.getElementById("delTargetShopEmail").value = shopEmail;
+    document.getElementById("delReasonInput").value = "";
+    activeReportIdToDelete = shopReportId;
+    document.getElementById("deleteShopModal").style.display = "flex";
+  }
+
+  window.closeDeleteShopModal = function() {
+    document.getElementById("deleteShopModal").style.display = "none";
+    activeReportIdToDelete = null;
+  }
+
+  window.confirmDeleteShop = async function() {
+    const vendorId = document.getElementById("delTargetVendorId").value;
+    const shopName = document.getElementById("delTargetShopName").innerText;
+    const shopEmail = document.getElementById("delTargetShopEmail").value;
+    const reason = document.getElementById("delReasonInput").value.trim();
+
+    if (!reason) return showToast("Inserisci la motivazione!", "error");
+
+    await _supabase.from('removed_vendors_log').insert([{ shop_name: shopName, email: shopEmail, reason: reason }]);
+    await _supabase.from('reviews').delete().eq('vendor_id', vendorId);
+    
+    if (activeReportIdToDelete) {
+      await _supabase.from('shop_reports').delete().eq('id', activeReportIdToDelete);
+    }
+
+    const { error } = await _supabase.from('vendors').delete().eq('id', vendorId);
+
+    if (error) {
+      showToast("Errore: " + error.message, "error");
+    } else {
+      showToast("Shop rimosso con successo dal sistema.", "success");
+      closeDeleteShopModal();
+      loadStaffData();
+    }
+  }
+</script>
+
+</body>
+</html>

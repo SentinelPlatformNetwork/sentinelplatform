@@ -1,0 +1,653 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sentinel - Vendor Dashboard</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-body: #f8fafc;
+      --bg-card: #ffffff;
+      --border: #e2e8f0;
+      --text-primary: #0f172a;
+      --text-secondary: #64748b;
+      --accent: #2563eb;
+      --accent-hover: #1d4ed8;
+      --purple-ai: #7c3aed;
+      --purple-ai-hover: #6d28d9;
+      --danger: #dc2626;
+      --danger-bg: #fef2f2;
+      --success: #16a34a;
+      --success-bg: #f0fdf4;
+      --warning-bg: #fffbeb;
+      --warning-border: #fef3c7;
+      --warning-text: #b45309;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', sans-serif; }
+    body { background-color: var(--bg-body); color: var(--text-primary); min-height: 100vh; display: flex; flex-direction: column; }
+
+    header { background: #ffffff; border-bottom: 1px solid var(--border); padding: 1rem 2rem; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 100; }
+    .logo { font-size: 1.25rem; font-weight: 700; color: var(--text-primary); display: flex; flex-direction: column; align-items: flex-start; gap: 2px; }
+
+    .container { max-width: 1000px; margin: 2rem auto; width: 90%; flex: 1; }
+
+    .card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; padding: 1.8rem; margin-bottom: 1.5rem; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+    .card-title { font-size: 1.2rem; font-weight: 700; margin-bottom: 0.4rem; color: var(--text-primary); }
+    .card-subtitle { color: var(--text-secondary); font-size: 0.9rem; margin-bottom: 1.5rem; }
+
+    .subnav { display: flex; gap: 8px; margin-bottom: 1.5rem; border-bottom: 1px solid var(--border); padding-bottom: 1rem; flex-wrap: wrap; }
+    .subnav button { padding: 6px 14px; border-radius: 6px; font-size: 0.85rem; font-weight: 600; cursor: pointer; border: 1px solid var(--border); background: #f8fafc; color: var(--text-secondary); }
+    .subnav button.active { background: var(--accent); color: #ffffff; border-color: var(--accent); }
+    .subnav button.ai-btn { background: #f3e8ff; color: var(--purple-ai); border-color: #e9d5ff; }
+    .subnav button.ai-btn:hover { background: #e9d5ff; }
+    .subnav button.ai-btn.active { background: var(--purple-ai); color: #ffffff; border-color: var(--purple-ai); }
+
+    .form-group { margin-bottom: 1.2rem; text-align: left; }
+    label { display: block; font-size: 0.85rem; font-weight: 600; color: var(--text-secondary); margin-bottom: 0.4rem; }
+    input, textarea, select { width: 100%; padding: 10px 14px; border-radius: 8px; border: 1px solid var(--border); background: #ffffff; color: var(--text-primary); font-size: 0.95rem; }
+    input:focus, textarea:focus, select:focus { outline: none; border-color: var(--accent); }
+
+    .btn { display: inline-flex; justify-content: center; align-items: center; width: 100%; padding: 10px 16px; border-radius: 8px; border: none; background: var(--accent); color: white; font-weight: 600; font-size: 0.95rem; cursor: pointer; transition: 0.2s; }
+    .btn:hover { background: var(--accent-hover); }
+    .btn-ai { background: var(--purple-ai); }
+    .btn-ai:hover { background: var(--purple-ai-hover); }
+    .btn-danger { background: var(--danger); }
+    .btn-danger:hover { background: #b91c1c; }
+    .btn-outline { background: transparent; border: 1px solid var(--border); color: var(--text-primary); }
+    .btn-outline:hover { background: #f8fafc; }
+
+    .chat-box { background: #f8fafc; border: 1px solid var(--border); border-radius: 8px; padding: 1rem; height: 340px; overflow-y: auto; margin-bottom: 1rem; display: flex; flex-direction: column; gap: 10px; }
+    .chat-msg { padding: 10px 14px; border-radius: 8px; font-size: 0.9rem; max-width: 85%; line-height: 1.4; word-break: break-word; white-space: pre-wrap; }
+    .chat-user { background: var(--accent); color: white; align-self: flex-end; }
+    .chat-ai { background: #ffffff; border: 1px solid var(--border); color: var(--text-primary); align-self: flex-start; }
+
+    table { width: 100%; border-collapse: collapse; margin-top: 1rem; }
+    th, td { padding: 12px; text-align: left; border-bottom: 1px solid var(--border); font-size: 0.9rem; }
+    th { color: var(--text-secondary); font-weight: 600; background: #f8fafc; }
+
+    .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15, 23, 42, 0.6); backdrop-filter: blur(2px); z-index: 1000; justify-content: center; align-items: center; }
+    .modal-box { background: #ffffff; border: 1px solid var(--border); border-radius: 12px; padding: 2rem; max-width: 600px; width: 90%; max-height: 90vh; overflow-y: auto; box-shadow: 0 10px 25px rgba(0,0,0,0.1); }
+
+    .id-help-trigger { display: inline-block; font-size: 0.85rem; color: var(--accent); font-weight: 600; cursor: pointer; margin-top: 6px; text-decoration: underline; }
+
+    #toastContainer { position: fixed; top: 20px; right: 20px; z-index: 9999; display: flex; flex-direction: column; gap: 10px; pointer-events: none; }
+    .toast { pointer-events: auto; min-width: 280px; max-width: 360px; padding: 12px 18px; border-radius: 8px; font-size: 0.9rem; font-weight: 600; box-shadow: 0 4px 12px rgba(0,0,0,0.12); display: flex; align-items: center; justify-content: space-between; animation: slideIn 0.3s forwards; transition: opacity 0.3s; }
+    .toast-success { background-color: var(--success-bg); color: var(--success); border: 1px solid rgba(22, 163, 74, 0.3); }
+    .toast-error { background-color: var(--danger-bg); color: var(--danger); border: 1px solid rgba(220, 38, 38, 0.3); }
+    .toast-fadeout { opacity: 0; transform: translateY(-10px); }
+
+    @keyframes slideIn { from { transform: translateY(-20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+
+    /* RIMOZIONE BADGE NETLIFY */
+    .netlify-badge, iframe[id*="netlify"], div[style*="z-index: 99999"] { display: none !important; }
+
+    footer { text-align: center; padding: 1.5rem; font-size: 0.85rem; color: var(--text-secondary); border-top: 1px solid var(--border); background: #ffffff; margin-top: auto; }
+  </style>
+</head>
+<body>
+
+  <div id="toastContainer"></div>
+
+  <header>
+    <div class="logo">
+      <span style="font-size: 1.25rem; font-weight: 700; color: var(--text-primary);">Sentinel Platform</span>
+      <span style="font-size: 0.75rem; color: var(--text-secondary); font-weight: 400;">Dashboard Venditore</span>
+    </div>
+    <div style="display: flex; align-items: center; gap: 1rem;">
+      <span id="vendorHeaderName" style="font-size: 0.9rem; font-weight: 600; color: var(--text-primary);"></span>
+      <button class="btn btn-outline" style="width: auto; padding: 6px 14px;" onclick="vendorLogout()">Esci</button>
+    </div>
+  </header>
+
+  <div class="container">
+
+    <div class="subnav">
+      <button class="active" onclick="switchVendorTab('tab-new-report', this)">➕ Nuova Segnalazione</button>
+      <button onclick="switchVendorTab('tab-my-reports', this); loadVendorReports();">📋 Le Mie Segnalazioni</button>
+      <button onclick="switchVendorTab('tab-reviews', this); loadVendorReviews();">⭐ Gestione Recensioni</button>
+      <button class="ai-btn" onclick="switchVendorTab('tab-ai', this)">🤖 Sentinel AI</button>
+      <button onclick="switchVendorTab('tab-settings', this); loadVendorSettings();">⚙️ Impostazioni & Contatti</button>
+      <button class="btn-outline" style="width: auto; padding: 6px 14px; font-size: 0.85rem;" onclick="openChangePasswordModal()">🔑 Modifica Password</button>
+    </div>
+
+    <!-- TAB 1: NUOVA SEGNALAZIONE -->
+    <div id="tab-new-report" class="vendor-tab-content card">
+      <div class="card-title">Crea Nuova Segnalazione</div>
+      <div class="card-subtitle">Segnala un acquirente scorretto o un tentativo di truffa inserendo il suo Roblox ID e caricando una prova in formato JPEG o PNG.</div>
+
+      <div class="form-group">
+        <label>Roblox ID dell'Utente *</label>
+        <input type="text" id="repRobloxId" placeholder="Es. 15689234">
+        <div>
+          <span class="id-help-trigger" onclick="openIdGuideModal()">Non conosci l'ID? Clicca qui per le istruzioni</span>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>Nome Utente Roblox (al momento della truffa) *</label>
+        <input type="text" id="repRobloxUsername" placeholder="Nome utente">
+      </div>
+
+      <div class="form-group">
+        <label>Username Discord dell'utente (Opzionale)</label>
+        <input type="text" id="repDiscordUsername" placeholder="@username_discord">
+      </div>
+
+      <div class="form-group">
+        <label>Motivazione / Dettagli della Truffa *</label>
+        <textarea id="repReason" rows="3" placeholder="Descrivi cosa è accaduto..."></textarea>
+      </div>
+
+      <div class="grid-2" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+        <div class="form-group">
+          <label>Punti Rischio (Gravità) *</label>
+          <select id="repRiskPoints">
+            <option value="10">10 PTS - Moderato / Tentativo</option>
+            <option value="25" selected>25 PTS - Truffa Accertata</option>
+            <option value="50">50 PTS - Gravissimo / Chargeback</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label>Carica Prova (Immagine) *</label>
+          <input type="file" id="repProofFile" accept="image/jpeg, image/png, image/jpg" style="padding: 7px;">
+        </div>
+      </div>
+
+      <button class="btn" style="margin-top: 1rem;" onclick="submitNewReport()">Invia Segnalazione al Database</button>
+    </div>
+
+    <!-- TAB 2: LE MIE SEGNALAZIONI -->
+    <div id="tab-my-reports" class="vendor-tab-content card" style="display: none;">
+      <div class="card-title">Le Segnalazioni Inviate dal Tuo Shop</div>
+      <div class="card-subtitle">Storico delle segnalazioni inserite nel network Sentinel.</div>
+
+      <div style="overflow-x: auto;">
+        <table>
+          <thead>
+            <tr>
+              <th>Roblox ID</th>
+              <th>Nome Utente</th>
+              <th>Motivo</th>
+              <th>Punti</th>
+              <th>Prova</th>
+              <th>Azioni</th>
+            </tr>
+          </thead>
+          <tbody id="vendorReportsTableBody">
+            <tr><td colspan="6" style="text-align:center; color: var(--text-secondary);">Caricamento segnalazioni...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- TAB 3: GESTIONE RECENSIONI -->
+    <div id="tab-reviews" class="vendor-tab-content card" style="display: none;">
+      <div class="card-title">Gestione Recensioni Ricevute</div>
+      <div class="card-subtitle">Visualizza le recensioni lasciate dai clienti e rispondi direttamente.</div>
+
+      <div id="vendorReviewsContainer">
+        <p style="color: var(--text-secondary); text-align: center;">Caricamento recensioni...</p>
+      </div>
+    </div>
+
+    <!-- TAB 4: SENTINEL AI -->
+    <div id="tab-ai" class="vendor-tab-content card" style="display: none;">
+      <div class="card-title">Sentinel AI - Assistente Sicurezza Venditori</div>
+      <div class="card-subtitle">Chiedi all'IA analisi di rischio su schermate di pagamento, messaggi sospetti o comportamenti insoliti prima di consegnare gli oggetti.</div>
+
+      <div class="chat-box" id="aiVendorChat">
+        <div class="chat-msg chat-ai">Sentinel AI attiva per l'Area Venditori. Come posso aiutarti a verificare una transazione o un acquirente?</div>
+      </div>
+
+      <div style="display: flex; gap: 8px;">
+        <input type="text" id="aiVendorInput" placeholder="Chiedi un consiglio di sicurezza (es. Un cliente vuole pagare con carta regalo, è sicuro?)..." onkeydown="if(event.key==='Enter') sendVendorAiMessage()">
+        <button class="btn btn-ai" style="width: 140px;" onclick="sendVendorAiMessage()">Invia</button>
+      </div>
+    </div>
+
+    <!-- TAB 5: IMPOSTAZIONI & CONTATTI -->
+    <div id="tab-settings" class="vendor-tab-content card" style="display: none;">
+      <div class="card-title">Impostazioni Shop & Contatti Ufficiali</div>
+      <div class="card-subtitle">Aggiorna le informazioni del tuo negozio e i tuoi contatti (es. nome utente Discord e link server) visibili ai clienti.</div>
+
+      <div class="form-group">
+        <label>Nome dello Shop *</label>
+        <input type="text" id="setShopName">
+      </div>
+
+      <div class="form-group">
+        <label>Contatto Discord Personale (Es. @tuonome) *</label>
+        <input type="text" id="setDiscordContact" placeholder="@il_tuo_discord">
+      </div>
+
+      <div class="form-group">
+        <label>Link Server Discord / Social *</label>
+        <input type="url" id="setDiscordLink" placeholder="https://discord.gg/...">
+      </div>
+
+      <div class="form-group">
+        <label>Descrizione dell'Attività *</label>
+        <textarea id="setShopDesc" rows="3"></textarea>
+      </div>
+
+      <div class="form-group" style="display: flex; align-items: center; gap: 10px; margin-top: 1rem;">
+        <input type="checkbox" id="setShowEmail" style="width: 20px; height: 20px; cursor: pointer;">
+        <label for="setShowEmail" style="margin-bottom: 0; cursor: pointer;">Mostra la mia email nei contatti pubblici dello shop</label>
+      </div>
+
+      <button class="btn" style="margin-top: 1.5rem;" onclick="saveVendorSettings()">Salva Modifiche</button>
+    </div>
+
+  </div>
+
+  <!-- MODALE GUIDA PER TROVARE L'ID ROBLOX -->
+  <div id="idGuideModal" class="modal-overlay">
+    <div class="modal-box" style="text-align: left;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; border-bottom: 1px solid var(--border); padding-bottom: 0.8rem;">
+        <h3 style="font-size: 1.15rem; font-weight: 700; color: var(--text-primary);">📖 Guida: Come trovare l'ID Roblox</h3>
+        <button class="btn btn-outline" style="width: auto; padding: 4px 10px;" onclick="closeIdGuideModal()">✕ Chiudi</button>
+      </div>
+
+      <div style="font-size: 0.9rem; line-height: 1.6; color: var(--text-primary);">
+        <p style="margin-bottom: 1rem;">L'ID Roblox è il codice numerico univoco del profilo dell'utente. Puoi ricavarlo in due passaggi:</p>
+
+        <!-- PASSO 1 GRAFICO -->
+        <div style="margin-bottom: 1.2rem; background: #f8fafc; border: 1px solid var(--border); padding: 1rem; border-radius: 8px;">
+          <h4 style="font-size: 0.95rem; font-weight: 700; color: var(--accent); margin-bottom: 0.4rem;">Passo 1: Cerca il profilo su Roblox</h4>
+          <p style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 12px;">Vai su <b>roblox.com</b>, scrivi il nome utente nella barra di ricerca principale e apri il suo profilo.</p>
+          
+          <div style="background: #000000; padding: 10px 14px; border-radius: 6px; color: #ffffff; display: flex; align-items: center; gap: 10px;">
+            <span style="font-weight: 800; font-size: 1rem;">ROBLOX</span>
+            <div style="background: #232527; flex: 1; padding: 6px 12px; border-radius: 4px; border: 1px solid #393b3d; font-size: 0.82rem; color: #a1a8b1; display: flex; align-items: center; justify-content: space-between;">
+              <span>🔍 Cerca "NomeUtenteAcquirente"</span>
+              <span style="font-size: 0.75rem; background: #393b3d; padding: 2px 6px; border-radius: 3px; color: #ffffff;">In Persone</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- PASSO 2 GRAFICO -->
+        <div style="margin-bottom: 1rem; background: #f8fafc; border: 1px solid var(--border); padding: 1rem; border-radius: 8px;">
+          <h4 style="font-size: 0.95rem; font-weight: 700; color: var(--accent); margin-bottom: 0.4rem;">Passo 2: Copia l'ID dal Link in alto</h4>
+          <p style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 12px;">Guarda la barra degli indirizzi del tuo browser. Copia l'intero link o unicamente i numeri che trovi dopo <code style="background:#e2e8f0; padding:2px 4px; border-radius:4px;">/users/</code>:</p>
+
+          <div style="background: #e2e8f0; padding: 8px 12px; border-radius: 8px; border: 1px solid var(--border); font-family: monospace;">
+            <div style="font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 4px; font-weight: bold; font-family: sans-serif;">🔒 Barra Indirizzo Browser:</div>
+            <div style="background: #ffffff; padding: 8px 12px; border-radius: 6px; border: 1px solid var(--border); font-size: 0.9rem; color: var(--text-primary); word-break: break-all;">
+              https://www.roblox.com/users/<span style="background: #fef08a; color: #b45309; padding: 2px 6px; border-radius: 4px; font-weight: 700;">156123456</span>/profile
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div style="margin-top: 1.5rem; text-align: right; border-top: 1px solid var(--border); padding-top: 1rem;">
+        <button class="btn" style="width: auto; padding: 8px 20px;" onclick="closeIdGuideModal()">Ho Capito</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODALE MODIFICA PASSWORD -->
+  <div id="changePassModal" class="modal-overlay">
+    <div class="modal-box" style="text-align: left; max-width: 450px;">
+      <h3 style="font-size: 1.15rem; font-weight: 700; margin-bottom: 0.4rem;">🔑 Modifica la tua Password</h3>
+      <p style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 1.2rem;">Inserisci la password attuale e la nuova password per il tuo account shop.</p>
+
+      <div class="form-group">
+        <label>Password Attuale *</label>
+        <input type="password" id="currPassword" placeholder="••••••••">
+      </div>
+
+      <div class="form-group">
+        <label>Nuova Password *</label>
+        <input type="password" id="newPassword" placeholder="••••••••">
+      </div>
+
+      <div style="display: flex; gap: 10px; margin-top: 1.5rem;">
+        <button class="btn btn-outline" style="width: 50%;" onclick="closeChangePasswordModal()">Annulla</button>
+        <button class="btn" style="width: 50%;" onclick="updateVendorPassword()">Salva Nuova Password</button>
+      </div>
+    </div>
+  </div>
+
+  <footer>
+    <p>&copy; 2026 Sentinel Platform. Area Riservata Venditori.</p>
+  </footer>
+
+<script>
+  const SUPABASE_URL = "https://ggdinppsioevnrrdhctz.supabase.co";
+  const SUPABASE_KEY = "sb_publishable_zXx1zMx8R0rYWZp6fwilOQ_ByWJ4T8S"; 
+  const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+  const GROQ_API_KEY = "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";
+
+  const currentVendor = JSON.parse(localStorage.getItem("sentinel_vendor") || "null");
+  if (!currentVendor) {
+    window.location.href = "index.html";
+  } else {
+    document.getElementById("vendorHeaderName").innerText = currentVendor.shop_name;
+  }
+
+  function showToast(message, type = 'success') {
+    const container = document.getElementById("toastContainer");
+    const toast = document.createElement("div");
+    toast.className = `toast toast-${type}`;
+    toast.innerHTML = `<span>${message}</span>`;
+    container.appendChild(toast);
+    setTimeout(() => {
+      toast.classList.add("toast-fadeout");
+      setTimeout(() => toast.remove(), 300);
+    }, 3000);
+  }
+
+  function switchVendorTab(tabId, btn) {
+    document.querySelectorAll('.vendor-tab-content').forEach(t => t.style.display = 'none');
+    document.querySelectorAll('.subnav button').forEach(b => b.classList.remove('active'));
+    document.getElementById(tabId).style.display = 'block';
+    if(btn) btn.classList.add('active');
+  }
+
+  function vendorLogout() {
+    localStorage.removeItem("sentinel_vendor");
+    window.location.href = "index.html";
+  }
+
+  function openIdGuideModal() {
+    document.getElementById("idGuideModal").style.display = "flex";
+  }
+
+  function closeIdGuideModal() {
+    document.getElementById("idGuideModal").style.display = "none";
+  }
+
+  function openChangePasswordModal() {
+    document.getElementById("currPassword").value = "";
+    document.getElementById("newPassword").value = "";
+    document.getElementById("changePassModal").style.display = "flex";
+  }
+
+  function closeChangePasswordModal() {
+    document.getElementById("changePassModal").style.display = "none";
+  }
+
+  async function updateVendorPassword() {
+    const currPass = document.getElementById("currPassword").value.trim();
+    const newPass = document.getElementById("newPassword").value.trim();
+
+    if (!currPass || !newPass) return showToast("Compila sia la password attuale che quella nuova!", "error");
+
+    if (currPass !== currentVendor.password) {
+      return showToast("La password attuale non corrisponde!", "error");
+    }
+
+    const { error } = await _supabase
+      .from('vendors')
+      .update({ password: newPass })
+      .eq('id', currentVendor.id);
+
+    if (error) {
+      showToast("Errore durante l'aggiornamento: " + error.message, "error");
+    } else {
+      currentVendor.password = newPass;
+      localStorage.setItem('sentinel_vendor', JSON.stringify(currentVendor));
+      showToast("Password aggiornata con successo!", "success");
+      closeChangePasswordModal();
+    }
+  }
+
+  // SENTINEL AI - VENDOR CHAT
+  async function sendVendorAiMessage() {
+    const input = document.getElementById("aiVendorInput");
+    const txt = input.value.trim();
+    if (!txt) return;
+
+    const chatBox = document.getElementById("aiVendorChat");
+    chatBox.innerHTML += `<div class="chat-msg chat-user">${txt}</div>`;
+    input.value = "";
+    chatBox.scrollTop = chatBox.scrollHeight;
+
+    const loadingId = 'vload_' + Date.now();
+    chatBox.innerHTML += `<div class="chat-msg chat-ai" id="${loadingId}">Elaborazione in corso...</div>`;
+    chatBox.scrollTop = chatBox.scrollHeight;
+
+    try {
+      const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${GROQ_API_KEY}` },
+        body: JSON.stringify({
+          model: "openai/gpt-oss-20b",
+          messages: [
+            { role: "system", content: "Sei Sentinel AI, assistente esperto di sicurezza e prevenzione truffe dedicato ai venditori su Roblox e Discord." },
+            { role: "user", content: txt }
+          ],
+          temperature: 0.7
+        })
+      });
+      const data = await response.json();
+      if (data.choices && data.choices[0].message) {
+        const fullText = data.choices[0].message.content;
+        const msgElement = document.getElementById(loadingId);
+        msgElement.innerText = "";
+        let charIndex = 0;
+        function typeWriter() {
+          if (charIndex < fullText.length) {
+            msgElement.innerText += fullText.charAt(charIndex);
+            charIndex++;
+            chatBox.scrollTop = chatBox.scrollHeight;
+            setTimeout(typeWriter, 12);
+          }
+        }
+        typeWriter();
+      } else { throw new Error("Risposta non valida"); }
+    } catch (err) {
+      document.getElementById(loadingId).innerText = "Errore di connessione: " + err.message;
+    }
+  }
+
+  // Caricamento impostazioni e contatti
+  async function loadVendorSettings() {
+    const { data, error } = await _supabase.from('vendors').select('*').eq('id', currentVendor.id).single();
+    if (data) {
+      document.getElementById("setShopName").value = data.shop_name || '';
+      document.getElementById("setDiscordContact").value = data.discord_contact || '';
+      document.getElementById("setDiscordLink").value = data.discord_link || '';
+      document.getElementById("setShopDesc").value = data.description || '';
+      document.getElementById("setShowEmail").checked = data.show_email !== false;
+    }
+  }
+
+  async function saveVendorSettings() {
+    const shopName = document.getElementById("setShopName").value.trim();
+    const discordContact = document.getElementById("setDiscordContact").value.trim();
+    const discordLink = document.getElementById("setDiscordLink").value.trim();
+    const description = document.getElementById("setShopDesc").value.trim();
+    const showEmail = document.getElementById("setShowEmail").checked;
+
+    if (!shopName || !discordContact) return showToast("Nome shop e contatto Discord sono obbligatori!", "error");
+
+    const { error } = await _supabase.from('vendors').update({
+      shop_name: shopName,
+      discord_contact: discordContact,
+      discord_link: discordLink,
+      description: description,
+      show_email: showEmail
+    }).eq('id', currentVendor.id);
+
+    if (error) {
+      showToast("Errore salvataggio: " + error.message, "error");
+    } else {
+      currentVendor.shop_name = shopName;
+      localStorage.setItem("sentinel_vendor", JSON.stringify(currentVendor));
+      document.getElementById("vendorHeaderName").innerText = shopName;
+      showToast("Impostazioni e contatti aggiornati con successo!", "success");
+    }
+  }
+
+  // Invio Nuova Segnalazione con caricamento prova JPEG
+  async function submitNewReport() {
+    const robloxIdStr = document.getElementById("repRobloxId").value.trim();
+    const robloxUsername = document.getElementById("repRobloxUsername").value.trim();
+    const discordUsername = document.getElementById("repDiscordUsername").value.trim();
+    const reason = document.getElementById("repReason").value.trim();
+    const riskPoints = parseInt(document.getElementById("repRiskPoints").value);
+    const fileInput = document.getElementById("repProofFile");
+
+    if (!robloxIdStr || !robloxUsername || !reason) {
+      return showToast("Compila tutti i campi obbligatori della segnalazione!", "error");
+    }
+
+    const robloxId = parseInt(robloxIdStr);
+    if (isNaN(robloxId)) return showToast("L'ID Roblox deve essere un numero valido!", "error");
+
+    let proofUrl = null;
+
+    if (fileInput.files && fileInput.files[0]) {
+      const file = fileInput.files[0];
+      if (!file.type.includes("jpeg") && !file.type.includes("jpg") && !file.type.includes("png")) {
+        return showToast("La prova deve essere un'immagine in formato JPEG o PNG!", "error");
+      }
+
+      showToast("Caricamento della prova in corso...", "success");
+      const fileName = `proof_${currentVendor.id}_${Date.now()}.${file.name.split('.').pop()}`;
+      
+      const { data: uploadData, error: uploadError } = await _supabase.storage
+        .from('proofs')
+        .upload(fileName, file);
+
+      if (uploadError) {
+        console.warn("Storage upload err, using temporary object URL or skipping:", uploadError.message);
+        proofUrl = "Caricato file locale: " + file.name;
+      } else {
+        const { data: publicUrlData } = _supabase.storage.from('proofs').getPublicUrl(fileName);
+        proofUrl = publicUrlData.publicUrl;
+      }
+    } else {
+      return showToast("È obbligatorio caricare una prova in formato JPEG/PNG!", "error");
+    }
+
+    const { error } = await _supabase.from('reports').insert([{
+      vendor_id: currentVendor.id,
+      roblox_id: robloxId,
+      roblox_username: robloxUsername,
+      discord_username: discordUsername,
+      reason: reason,
+      risk_points: riskPoints,
+      proof_url: proofUrl,
+      reporter_discord_id: currentVendor.shop_name
+    }]);
+
+    if (error) {
+      showToast("Errore inserimento segnalazione: " + error.message, "error");
+    } else {
+      showToast("Segnalazione inviata con successo!", "success");
+      document.getElementById("repRobloxId").value = "";
+      document.getElementById("repRobloxUsername").value = "";
+      document.getElementById("repDiscordUsername").value = "";
+      document.getElementById("repReason").value = "";
+      fileInput.value = "";
+    }
+  }
+
+  // Caricamento segnalazioni del venditore
+  async function loadVendorReports() {
+    const tbody = document.getElementById("vendorReportsTableBody");
+    tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; color: var(--text-secondary);">Caricamento segnalazioni...</td></tr>`;
+
+    const { data: reports, error } = await _supabase
+      .from('reports')
+      .select('*')
+      .eq('vendor_id', currentVendor.id)
+      .order('created_at', { ascending: false });
+
+    if (error || !reports || reports.length === 0) {
+      tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; color: var(--text-secondary);">Non hai ancora inviato alcuna segnalazione.</td></tr>`;
+      return;
+    }
+
+    tbody.innerHTML = "";
+    reports.forEach(r => {
+      tbody.innerHTML += `
+        <tr>
+          <td><strong>${r.roblox_id}</strong></td>
+          <td>@${r.roblox_username}</td>
+          <td>${r.reason}</td>
+          <td><strong style="color:var(--danger);">${r.risk_points} PTS</strong></td>
+          <td>${r.proof_url ? `<a href="${r.proof_url}" target="_blank" style="color:var(--accent);">Vedi Prova</a>` : 'Nessuna'}</td>
+          <td>
+            <button class="btn btn-danger" style="padding:4px 8px; font-size:0.8rem; width:auto;" onclick="deleteVendorReport(${r.id})">Elimina</button>
+          </td>
+        </tr>
+      `;
+    });
+  }
+
+  async function deleteVendorReport(reportId) {
+    if (!confirm("Eliminare questa segnalazione?")) return;
+    const { error } = await _supabase.from('reports').delete().eq('id', reportId).eq('vendor_id', currentVendor.id);
+    if (error) showToast("Errore: " + error.message, "error");
+    else {
+      showToast("Segnalazione eliminata.", "success");
+      loadVendorReports();
+    }
+  }
+
+  // Gestione recensioni ricevute dallo shop
+  async function loadVendorReviews() {
+    const container = document.getElementById("vendorReviewsContainer");
+    container.innerHTML = `<p style="color: var(--text-secondary); text-align: center;">Caricamento recensioni...</p>`;
+
+    const { data: reviews, error } = await _supabase
+      .from('reviews')
+      .select('*')
+      .eq('vendor_id', currentVendor.id)
+      .order('created_at', { ascending: false });
+
+    if (error || !reviews || reviews.length === 0) {
+      container.innerHTML = `<p style="color: var(--text-secondary); text-align: center;">Nessuna recensione ricevuta al momento.</p>`;
+      return;
+    }
+
+    container.innerHTML = "";
+    reviews.forEach(r => {
+      container.innerHTML += `
+        <div style="background:#f8fafc; border:1px solid var(--border); padding:1.2rem; border-radius:8px; margin-bottom:1rem; text-align:left;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+            <strong>${r.username}</strong>
+            <span style="font-size:0.85rem;">${'⭐'.repeat(r.stars)}</span>
+          </div>
+          <span style="display:inline-block; font-size:0.75rem; background:#eff6ff; color:var(--accent); padding:2px 8px; border-radius:12px; font-weight:600; margin-bottom:6px;">Canale: ${r.platform}</span>
+          <p style="font-size:0.9rem; color:var(--text-primary); margin-bottom:10px;">"${r.comment}"</p>
+
+          ${r.reply ? `
+            <div style="background:#eff6ff; border-left:3px solid var(--accent); padding:8px 12px; border-radius:4px; font-size:0.85rem; margin-bottom:10px;">
+              <strong style="color:var(--accent);">La tua risposta:</strong>
+              <p style="margin-top:2px;">${r.reply}</p>
+            </div>
+          ` : `
+            <div style="display:flex; gap:8px; margin-top:8px;">
+              <input type="text" id="replyInput_${r.id}" placeholder="Scrivi una risposta pubblica..." style="font-size:0.85rem;">
+              <button class="btn" style="width:120px; font-size:0.85rem; padding:6px;" onclick="sendVendorReply(${r.id})">Rispondi</button>
+            </div>
+          `}
+        </div>
+      `;
+    });
+  }
+
+  async function sendVendorReply(reviewId) {
+    const input = document.getElementById(`replyInput_${reviewId}`);
+    const replyText = input.value.trim();
+    if (!replyText) return showToast("Scrivi del testo per rispondere!", "error");
+
+    const { error } = await _supabase.from('reviews').update({ reply: replyText }).eq('id', reviewId);
+    if (error) showToast("Errore: " + error.message, "error");
+    else {
+      showToast("Risposta pubblicata con successo!", "success");
+      loadVendorReviews();
+    }
+  }
+</script>
+
+</body>
+</html>
