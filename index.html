@@ -122,7 +122,7 @@ footer { background: #ffffff; border-top: 1px solid var(--border); padding: 2.5r
 <body>
 <div id="toastContainer"></div>
 
-<!-- MODALE SUPPORTO / DONAZIONE (NON INVASIVO) -->
+<!-- MODALE SUPPORTO / DONAZIONE (NON INVASIVO ALL'APERTURA) -->
 <div id="supportModal" class="modal-overlay">
   <div class="modal-box" style="text-align: center; max-width: 480px;">
     <div style="font-size: 2.5rem; margin-bottom: 0.5rem;">☕</div>
@@ -172,6 +172,20 @@ footer { background: #ffffff; border-top: 1px solid var(--border); padding: 2.5r
       <p style="color: var(--text-secondary); font-size: 1rem; line-height: 1.6; max-width: 700px; margin: 0 auto 1.5rem auto;">
         Sentinel offre un database centralizzato per venditori e utenti. Trova gli shop più affidabili, leggi le recensioni verificate e controlla i profili prima di completare uno scambio.
       </p>
+
+      <!-- CARD FISSA DI INCORAGGIAMENTO A DONARE NELLA HOME -->
+      <div style="background: linear-gradient(135deg, #eff6ff 0%, #f3e8ff 100%); border: 1px solid #bfdbfe; border-radius: 12px; padding: 1.5rem; margin: 0 auto 1.5rem auto; max-width: 700px; text-align: left; display: flex; align-items: center; justify-content: space-between; gap: 15px; flex-wrap: wrap;">
+        <div style="flex: 1; min-width: 250px;">
+          <div style="font-weight: 700; font-size: 1rem; color: var(--text-primary); margin-bottom: 4px; display: flex; align-items: center; gap: 6px;">
+            <span>💖</span> Supporta il Progetto Sentinel
+          </div>
+          <p style="font-size: 0.85rem; color: var(--text-secondary); line-height: 1.4;">
+            Aiutaci a mantenere il database attivo e sicuro contro le truffe su Roblox. Anche un piccolo contributo fa la differenza!
+          </p>
+        </div>
+        <a href="https://ko-fi.com/giux44772fondatoredisentinel" target="_blank" class="btn" style="width: auto; padding: 10px 20px; font-size: 0.9rem; background: var(--accent);">☕ Dona su Ko-fi</a>
+      </div>
+
       <div style="display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;">
         <button class="btn" style="width: auto; padding: 10px 24px;" onclick="switchPage('p-shops', document.querySelectorAll('header nav button')[1]); loadShopsList();">Esplora Lista Shop</button>
         <button class="btn btn-outline" style="width: auto; padding: 10px 24px;" onclick="switchPage('p-search', document.querySelectorAll('header nav button')[2])">Cerca Utente Roblox</button>
@@ -589,7 +603,7 @@ footer { background: #ffffff; border-top: 1px solid var(--border); padding: 2.5r
         <li>Non sono presenti cookie di profilazione, tracciamento pubblicitario o strumenti di web analytics di terze parti (es. Google Analytics).</li>
         <li>Non sono presenti widget o video incorporati da piattaforme esterne che rilasciano cookie traccianti.</li>
       </ul>
-      <p>I cookie tecnici utilizzati servono unicamente a mantenere attiva la sessione di login dell'utente e memorizzare le preferenze essenziali. Non richiedono il consenso preventivo, ma solo questa comunicazione informativa.</p>
+      <p>I cookie tecnici utilizadoservono unicamente a mantenere attiva la sessione di login dell'utente e memorizzare le preferenze essenziali. Non richiedono il consenso preventivo, ma solo questa comunicazione informativa.</p>
       <h4>7. Diritti dell'Utente (Art. 15-22 GDPR)</h4>
       <p>In ogni momento, l'utente può esercitare i propri diritti scrivendo all'indirizzo del Titolare. Nello specifico, hai il diritto di:</p>
       <ul>
