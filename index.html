@@ -137,6 +137,33 @@ footer { background: #ffffff; border-top: 1px solid var(--border); padding: 2.5r
   </div>
 </div>
 
+<!-- MODALE SPIEGAZIONE PTS -->
+<div id="ptsGuideModal" class="modal-overlay">
+  <div class="modal-box" style="max-width: 500px; text-align: left;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; border-bottom: 1px solid var(--border); padding-bottom: 0.8rem;">
+      <h3 style="font-size: 1.15rem; font-weight: 700; color: var(--text-primary);">ℹ️ Cosa sono i PTS?</h3>
+      <button class="btn btn-outline" style="width: auto; padding: 4px 10px;" onclick="closePtsGuideModal()">✕ Chiudi</button>
+    </div>
+    <div style="font-size: 0.9rem; line-height: 1.6; color: var(--text-primary);">
+      <p style="margin-bottom: 1rem;">I PTS quantificano il livello di rischio di un utente Roblox calcolato da Sentinel Platform:</p>
+      <ul style="list-style: none; display: flex; flex-direction: column; gap: 10px;">
+        <li style="background: #fffbeb; border: 1px solid #fef3c7; padding: 10px; border-radius: 8px;">
+          <strong style="color: #b45309;">- 10 PTS — Rischio Moderato:</strong> Utente con piccole anomalie o prime segnalazioni. Prestare attenzione durante gli scambi.
+        </li>
+        <li style="background: #fef2f2; border: 1px solid #fecaca; padding: 10px; border-radius: 8px;">
+          <strong style="color: var(--danger);">- 25 PTS — Rischio Medio:</strong> Segnalazioni multiple o comportamenti sospetti rilevati dall'IA. Si raccomanda prudenza.
+        </li>
+        <li style="background: #fef2f2; border: 1px solid #dc2626; padding: 10px; border-radius: 8px;">
+          <strong style="color: var(--danger);">- 50 PTS — Rischio Molto Grave:</strong> Storico di truffe accertate o altissimo rischio. Scambio fortemente sconsigliato.
+        </li>
+      </ul>
+    </div>
+    <div style="margin-top: 1.5rem; text-align: right; border-top: 1px solid var(--border); padding-top: 1rem;">
+      <button class="btn" style="width: auto; padding: 8px 20px;" onclick="closePtsGuideModal()">Ho Capito</button>
+    </div>
+  </div>
+</div>
+
 <!-- POPUP COOKIE -->
 <div id="cookieBanner" class="cookie-banner">
   <div style="font-weight: 700; font-size: 0.95rem; margin-bottom: 4px;">Informativa sui Cookie</div>
@@ -242,8 +269,9 @@ footer { background: #ffffff; border-top: 1px solid var(--border); padding: 2.5r
         <input type="text" id="searchInput" placeholder="Incolla l'ID (es. 156) o il link del profilo..." onkeydown="if(event.key === 'Enter') searchUsersList()">
         <button class="btn" id="searchBtn" style="width: 130px;" onclick="searchUsersList()">Cerca</button>
       </div>
-      <div>
-        <span class="id-help-trigger" onclick="openIdGuideModal()">Non conosci l'ID? Clicca qui per le istruzioni</span>
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 6px;">
+        <span class="id-help-trigger" onclick="openIdGuideModal()" style="margin-top:0;">Non conosci l'ID? Clicca qui per le istruzioni</span>
+        <button class="btn btn-outline" style="width: auto; padding: 4px 10px; font-size: 0.8rem;" onclick="openPtsGuideModal()">❓ Cosa sono i PTS?</button>
       </div>
       <div id="searchBox" style="display: none; margin-top: 1.5rem;">
         <div class="profile-card" style="display: flex; gap: 1rem; align-items:center; background:#f8fafc; padding:1rem; border-radius:8px; border:1px solid var(--border);">
@@ -655,6 +683,9 @@ footer { background: #ffffff; border-top: 1px solid var(--border); padding: 2.5r
     <p style="margin-bottom: 6px;">
       <b>DISCLAIMER:</b> Sentinel Platform è una piattaforma indipendente gestita dalla community e non è affiliata, sponsorizzata, associata o approvata da Roblox Corporation o Discord Inc. Tutti i marchi registrati e le immagini appartengono ai rispettivi proprietari.
     </p>
+    <p style="margin-bottom: 6px;">
+      Sentinel Platform versione 1.1
+    </p>
     <p>
       &copy; 2026 Sentinel Platform. Tutti i diritti riservati. Sistema indipendente a supporto della community.
     </p>
@@ -678,6 +709,14 @@ window.addEventListener('DOMContentLoaded', () => {
 
 function closeSupportModal() {
   document.getElementById("supportModal").style.display = "none";
+}
+
+function openPtsGuideModal() {
+  document.getElementById("ptsGuideModal").style.display = "flex";
+}
+
+function closePtsGuideModal() {
+  document.getElementById("ptsGuideModal").style.display = "none";
 }
 
 function validateEmail(email) {
